@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.parquet;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
@@ -31,6 +32,8 @@ import org.apache.drill.metastore.statistics.ColumnStatisticsKind;
 import org.apache.drill.metastore.metadata.LocationProvider;
 import org.apache.drill.shaded.guava.com.google.common.collect.HashBasedTable;
 import org.apache.drill.shaded.guava.com.google.common.collect.Table;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,6 +41,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import static org.apache.drill.common.types.Types.NULL;
 
 /**
  * Holds common statistics about data in parquet group scan,
@@ -115,7 +120,7 @@ public class ParquetGroupScanStatistics<T extends BaseMetadata & LocationProvide
           previousCount.setValue(Statistic.NO_COLUMN_STATS);
         }
         ColumnMetadata columnMetadata = SchemaPathUtils.getColumnMetadata(schemaPath, metadata.getSchema());
-        TypeProtos.MajorType majorType = columnMetadata != null ? columnMetadata.majorType() : null;
+        TypeProtos.MajorType majorType = columnMetadata != null ? columnMetadata.majorType() : NULL;
         boolean partitionColumn = checkForPartitionColumn(statistics, first, localRowCount, majorType, schemaPath);
         if (partitionColumn) {
           Object value = partitionValueMap.get(metadata.getPath(), schemaPath);
@@ -176,14 +181,14 @@ public class ParquetGroupScanStatistics<T extends BaseMetadata & LocationProvide
         return false;
       }
     } else {
-      if (!partitionColTypeMap.keySet().contains(schemaPath)) {
+      if (!partitionColTypeMap.containsKey(schemaPath)) {
         return false;
       } else {
         if (!hasSingleValue(columnStatistics, rowCount)) {
           partitionColTypeMap.remove(schemaPath);
           return false;
         }
-        if (!partitionColTypeMap.get(schemaPath).equals(type)) {
+        if (ObjectUtils.notEqual(partitionColTypeMap.get(schemaPath), type)) {
           partitionColTypeMap.remove(schemaPath);
           return false;
         }
